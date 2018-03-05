@@ -7,6 +7,7 @@ data segment
 intro db "Enter string...", 0Dh,0Ah,"$"
 first_substr db 0Dh,0Ah, "Enter first substr: ",0Dh,0Ah,"$"
 second_substr db 0Dh,0Ah, "Enter second substr: ",0Dh,0Ah,"$" 
+answer db 0Dh,0Ah, "Answer:  ",0Dh,0Ah,"$"
 string db 202 dup("$")
 find_str db 202 dup("$")
 change_str db 202 dup("$") 
@@ -18,7 +19,8 @@ code segment
 start: 
 ; set segment registers: 
 mov ax, data 
-mov ds, ax  
+mov ds, ax
+mov es,ax  
 
 lea dx, intro 
 call output 
@@ -93,23 +95,44 @@ add_str:
       lea bx,string
       mov al,length
       add al,1
-      add bx,al
+      add byte ptr[bx],al
       dec length
       jmp pushInStack
       
 pushInStack:
-    cmp ch,length
-    jbe addItem
+    cmp length,cl
+    jge addItem
     jmp pasteStr
     
 addItem:
     lodsb
-    push al
+    xor ah,ah
+    push ax
     dec length
     jmp pushInStack     
 
 pasteStr:
+    lea si,change_str
+    add si,2
     
+    
+    add cl,2
+    xor ch,ch
+    ;mov ax,[change_str+1]
+    mov al,[string+1]
+    add al,[change_str+1]
+    lea di,string
+    mov [string+1],al
+    add di, cx
+    
+    
+    
+    xor cx,cx
+    mov cl,[change_str+1]
+    
+    rep movsb 
+    
+    jmp finish
                     
 input proc near
     mov ah,0Ah
@@ -124,5 +147,11 @@ output proc near
 output endp
 
 finish:
-
+      lea dx,answer
+      call output
+      lea dx,string
+      add dx,2
+      call output
+      mov ax,4c00h
+      int 21h
 end start
