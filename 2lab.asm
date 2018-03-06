@@ -165,6 +165,9 @@ output proc near
 output endp
 
 finish:
+      xor ax,ax
+      mov ax,'$'
+      stosb
       lea dx,answer
       call output
       lea dx,string
