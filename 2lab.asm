@@ -85,8 +85,8 @@ l_equal:
 
 not_equal:
     inc cl ;i++
-    
-    xor ah,ah  ;ah=0
+    mov ch,cl   ;remember start of changable str
+    xor ah,ah  ;ah=0 num of equal sym
     lea bx,find_str  ;bx pointing on first sym
     add bx,2
     jmp find_equal   ;
@@ -94,8 +94,13 @@ add_str:
       std
       lea bx,string
       mov al,length
-      add al,1
-      add byte ptr[bx],al
+      add al,1         ;mov pointer on last sym
+      xor ah,ah
+      add bx,ax
+      
+      mov si,bx
+      mov dh, length
+      sub dh,cl ; num of elem in stack
       dec length
       jmp pushInStack
       
@@ -105,6 +110,8 @@ pushInStack:
     jmp pasteStr
     
 addItem:
+
+    std ;add in stack and movsb
     lodsb
     xor ah,ah
     push ax
@@ -112,26 +119,41 @@ addItem:
     jmp pushInStack     
 
 pasteStr:
+    cld
     lea si,change_str
     add si,2
     
     
-    add cl,2
-    xor ch,ch
+    xor ax,ax
+    mov al,ch
+    
+    lea di,string
+    add di,2
+    add di, ax
+    ;add di,ch
+    ;add cl,1
+    ;xor ch,ch
     ;mov ax,[change_str+1]
     mov al,[string+1]
     add al,[change_str+1]
-    lea di,string
     mov [string+1],al
-    add di, cx
     
-    
+    ;add di,2
+    ;add byte ptr di, ch
     
     xor cx,cx
     mov cl,[change_str+1]
+     
+    rep movsb
     
-    rep movsb 
-    
+    mov cl,dh
+     
+getFromStack:
+    cld
+    xor ax,ax
+    pop ax
+    stosb
+    loop getFromStack        
     jmp finish
                     
 input proc near
