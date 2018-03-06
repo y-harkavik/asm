@@ -50,21 +50,28 @@ mov [change_str], al    ;load max string length
 mov [change_str + 1], 0 ;load max string length
 lea dx, change_str      ;load string to dx 
 call input
-   
+
+xor bx,bx
+xor cx,cx   
 go:
-lea bx,find_str         ; set find_str in bx
+mov cl,bl
 lea si,string           ; set string in si
+add si,bx                ;moving si ptr to fisrt string character
+add si,2
+
+lea bx,find_str         ; set find_str in bx
+add bx,2                ;moving bx ptr to fisrt string character
 
 mov al, [string + 1]    ;saving fact string length into al 
 mov length, al          ;saving fact length
 
-add bx,2                ;moving bx ptr to fisrt string character
-add si,2                ;moving si ptr to fisrt string character
+
+
 cld
 
 xor dx,dx               ;null dx,ax,cx
 xor ax,ax
-xor cx,cx
+
 mov dh,[find_str+1]     ;saving fact length of find_str
 
 find_equal:
@@ -132,7 +139,10 @@ pasteStr:
     add di, ax
     
     add al,[change_str+1]  ;num of sym before substr + num of sym change_str
+    xor bx,bx
+    mov bl,al
     add al,dh              ;and +num sym in stack
+    
 
     mov [string+1],al   ;change fact length in str
     
@@ -151,6 +161,7 @@ getFromStack:
     pop ax
     stosb               ;put sym from al to di and di++
     loop getFromStack
+    xor cx,cx
     jmp go        
     jmp finish
                     
