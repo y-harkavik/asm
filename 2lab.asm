@@ -130,16 +130,10 @@ pasteStr:
     lea di,string
     add di,2
     add di, ax
-    ;add di,ch
-    ;add cl,1
-    ;xor ch,ch
-    ;mov ax,[change_str+1]
+
     mov al,[string+1]
     add al,[change_str+1]
     mov [string+1],al
-    
-    ;add di,2
-    ;add byte ptr di, ch
     
     xor cx,cx
     mov cl,[change_str+1]
@@ -149,6 +143,8 @@ pasteStr:
     mov cl,dh
      
 getFromStack:
+    cmp cl,0
+    je finish
     cld
     xor ax,ax
     pop ax
