@@ -56,7 +56,7 @@ xor cx,cx
 go:
 mov cl,bl
 lea si,string           ; set string in si
-add si,bx                ;moving si ptr to fisrt string character
+add si,bx               ;moving si ptr to fisrt string character
 add si,2
 
 lea bx,find_str         ; set find_str in bx
@@ -69,7 +69,7 @@ mov length, al          ;saving fact length
 
 cld
 
-xor dx,dx               ;null dx,ax,cx
+xor dx,dx               ;null dx,ax
 xor ax,ax
 
 mov dh,[find_str+1]     ;saving fact length of find_str
