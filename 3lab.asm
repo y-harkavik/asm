@@ -6,22 +6,21 @@ MaxArrayLength              equ 30
             
 ArrayLength                 dw  ?
 InputArrayLengthMsgStr      db  'Input array length: $'
-                                
+maxNull                     db 0Ah,0Dh,'All infinity','$',0Ah,0Dh                                
 ErrorInputMsgStr            db  0Ah,0Dh,'Incorrect value!',0Ah,0Dh, '$' 
 ErrorInputArrayLengthMsgStr db  0Ah,0Dh,'Array length should be not less than 0 and not bigger than 30!', '$'
                                 
-InputMsgStr                 db 0Ah, 0Dh,'Input '    
+InputMsgStr                 db 0Ah, 0Dh,'Input element (-32 768..32 767) : $'    
 CurrentEl                   db  2 dup(0)
-InputMsgStr_2               db  ' element (-32 768..32 767) : $'
 
-Answer                      db  2 dup(0)
-ResultMsgStr                db  0Dh, 'Result: $'
+Answer                      db  20 dup('$'), 0Ah,0Dh, '$'
                                 
 NumBuffer                   dw 0
 
 NumLength                   db 7
 EnterredNum                 db 9 dup('$')              
-       
+
+nextStr                     db 0Ah,0Dh,'$'       
 ten                         dw 10
 two                         dw 2	
 precision                   db  5             
@@ -39,7 +38,7 @@ mov	ax,@data                      ;
 mov	ds,ax                         ;
                                   ;
 xor	ax,ax                         ;
-                                  ;
+                               ;
 call inputMas                     ;
 call FindMax                      ;
 call MakeNormal
@@ -133,9 +132,12 @@ inputElementBuff proc
          xor ax,ax
          mov ax,NumBuffer
          
-         mul dx
+         imul dx
          jo badNum
+         cmp minus,1
+         je doSub
          add ax, bx
+         comeBack:
          jo badNum
          mov NumBuffer,ax
          mov bx,1
@@ -145,16 +147,19 @@ inputElementBuff proc
     
     mov ax,NumBuffer
     
-    cmp minus,0
-    je finish
-    mov dx,-1
-    mul dx
+    ;cmp minus,0
+    ;je finish
+    ;mov dx,-1
+    ;mul dx
     mov minus,0
+    
     
     finish: 
     call resetNumBuffer                        
     ret 
-   
+doSub:
+    sub ax,bx
+    jmp comeBack       
 checkMinus:
     inc bl
     cmp al, '-'
@@ -251,6 +256,8 @@ FindMax proc near
 endp                              ;
 
 MakeNormal proc near
+    cmp Max,0
+    je  divNull
     xor cx,cx
     mov cl,byte ptr [ArrayLength]
     xor di,di
@@ -259,65 +266,175 @@ MakeNormal proc near
     xor dx,dx
     
     make:
+        mov minus,0
         cmp cl,0
         je goEnd
         xor dx,dx
-        mov ax, Array[di]
+        mov ax, Array[si]
         xor ch,ch
-        mov Temp,0
+        lea di,Answer
+        cmp Max,0
+        jg setZnak
+        cmp Max,0
+        jl setPlus
+        return2:
+        mov [di],'+'
+        inc di
     makeNum: 
         cmp ch,precision
-        jg saveNum
+        jg saveNum 
         mov bx,ax
         
         idiv Max
         
-        cmp ax,0
+        cmp minus,0
+        jne jump
         
+        call makeMainPart
+        cmp minus,1
+        je incMinus
+        
+        jump:
+        cmp ax,0
         je increase
         
-        push dx
-        mov bx,ax
+        add al,'0'
         
-        mov ax,Temp
-        imul ten
+        mov [di],al
+        inc di
         
-       
-        add ax,bx
-        
-        mov Temp,dx
-        sal Temp,16
-        add Temp,ax
-        pop dx
         mov ax,dx
         imul ten
         inc ch
         jmp makeNum
         
+    incMinus:
+        mov ax,dx
+        mul ten
+        inc minus
+        jmp makeNum
+            
+    increase:        
+        add al,'0'
         
-    increase:
+        mov [di],al
+        inc di
+        
+        cmp minus,0
+        je firstSymbol
+        return:
         inc ch
-        
-        mov ax,Temp
-        imul ten
-        mov Temp,ax 
+                         
         mov ax,bx
 
         imul ten
         
-        
         jmp makeNum
         
     saveNum:
+        call output 
+        add si,2
+        jmp make
         
-        
-    goEnd:    
+    goEnd:
+        mov ax,4c00h
+        int 21h    
     ret    
-endp     
-                                      ;
-output proc                       ;
-                          ;
+endp
+    
+makeMainPart proc near
+    push dx
+    push cx
+    push bx
+    xor cx,cx
+
+st: 
+    xor dx,dx
+    idiv ten
+    cmp ax,0
+    jnz go1
+    cmp dx,0
+    jnz go1
+    jmp fin    
+go1:
+    inc cx
+    push dx
+    jmp st
+fin:
+
+loop1:
+    cmp cx,0
+    jz ifNoMainPart
+    pop bx
+    add bx,'0'
+    mov  [di],bx
+    inc di
+loop loop1
+
+mov [di],'.'
+inc di
+    
+jmp fin2
+
+ifNoMainPart:
+    mov [di],'0'
+    inc di
+    mov [di],'.'
+    inc di
+fin2:
+    mov minus,1
+    pop bx
+    pop cx
+    pop dx        
+    ret
+endp
+    
+setPlus:
+    push ax
+    mov ax,Max
+    mov bx,-1
+    imul bx
+    pop ax
+    imul bx
+    jmp return2
+
+setZnak:
+    cmp ax,0
+    jge return2
+    mov [di],'-'
+    inc di
+    mov bx,-1
+    imul bx
+    jmp makeNum
+
+;firstSymbol1:
+ ;       mov al,'.'
+  ;      mov [di],al
+   ;     inc di
+    ;    jmp return1
+       
+firstSymbol:
+        mov al,'.'
+        mov [di],al
+        inc di
+        mov minus,1
+        jmp return
+;
+output proc
+    lea dx,nextStr
+    mov ah,09h
+    int 21h                       ;
+    lea dx, Answer
+    mov ah,09h
+    int 21h
+    dec cl                
     ret                           ;
 endp                              ;
-                                  ;
+divNull:
+lea dx,maxNull
+    mov ah,09h
+    int 21h
+    mov ax,4c00h
+    int 21h    
+    ret                                ;
 end	start                         ;
