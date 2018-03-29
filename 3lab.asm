@@ -26,6 +26,7 @@ two                         dw 2
 precision                   db  5             
 minus                       db  0  
 Max                         dw  0
+MaxTemp                     dw  0
 Array                       dw  MaxArrayLength dup (0)
 Temp                        dd 0
 OutputArray                 dd MaxArrayLength dup(0) 
@@ -251,7 +252,8 @@ FindMax proc near
         
         jmp find    
     endFind:
-    mov Max,ax               
+    mov Max,ax
+    mov MaxTemp,ax               
     ret                           ;
 endp                              ;
 
@@ -266,6 +268,8 @@ MakeNormal proc near
     xor dx,dx
     
     make:
+        mov ax,MaxTemp
+        mov Max,ax
         mov minus,0
         cmp cl,0
         je goEnd
@@ -289,6 +293,7 @@ MakeNormal proc near
         
         cmp minus,0
         jne jump
+        
         
         call makeMainPart
         cmp minus,1
@@ -394,6 +399,7 @@ setPlus:
     mov ax,Max
     mov bx,-1
     imul bx
+    mov Max,ax
     pop ax
     imul bx
     jmp return2
