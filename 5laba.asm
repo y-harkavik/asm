@@ -12,10 +12,9 @@ flagStart             dw  0
 maxCMDSize equ 127
 cmd_size              db  ?
 cmd_text              db  maxCMDSize + 2 dup(0)
-sourcePath            db  129 dup (0) 
-tempSourcePath        db  128 dup (0)
+sourcePath            db  128 dup (0) 
 
-;path                  db "kol.txt",0
+path                  db "kol.txt",0
 destinationPath       db  "output.txt",0
 extension             db "txt"       
 point2                db '.'
@@ -30,12 +29,12 @@ endl                  equ 0
 enteredString         db 200 dup("$")
 enteredStringSize     dw 0
 
-startProcessing       db "Processing started",                                                '$'                      
+startProcessing       db "Processing started",'$'                      
 startText             db  "Program is started",                                               '$'
 badCMDArgsMessage     db  "Bad command-line arguments.",                                      '$'
-badSourceText         db  "Open error",                                                       '$'    
+badSourceText         db  "Open error", "$"    
 fileNotFoundText      db  "File not found",                                                   '$'
-endText               db  0Dh,0Ah,"Program is ended",                                         '$'
+endText               db  0Dh,0Ah,"Program is ended",                                     '$'
 errorReadSourceText   db  "Error reading from source file",                                   '$'
 
 .code
@@ -66,13 +65,13 @@ println MACRO info          ;
                             ;
 	mov dl, 0Dh             ; Символ перехода в начало строки   
 	mov ah, 02h             ;
-	int 21h                 ;     
+	int 21h                 ;            ==//==
                             ;
 	pop dx                  ;
 	pop ax                  ;
 ENDM
 
-strcpy MACRO destination, source, count       ;Макрос, предназначенный для копирования из source в destination заданное количество символов
+strcpy MACRO destination, source, count
     push cx
     push di
     push si
@@ -89,8 +88,8 @@ strcpy MACRO destination, source, count       ;Макрос, предназначенный для копир
     pop di
     pop cx
 ENDM   
-
-incrementTempPos MACRO num          ;Инкрементируем tempDX, если произошло переполнение фиксируем это
+;11111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
+incrementTempPos MACRO num
     add tempDX, num
     jo overflowTempPos
     jmp endIncrementTempPos
@@ -103,8 +102,8 @@ overflowTempPos:
 endIncrementTempPos:
             
 endm 
-
-incrementStartPos proc          ; Инкрементируем startDX, если произошло переполнение фиксируем это
+;22222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222
+incrementStartPos proc
     push ax
     
     mov ax, tempDX
@@ -123,42 +122,42 @@ endIncrement:
     pop ax
     ret    
 endp    
-
+;----------------------------------------------------------------------------------------------------  
 fseekCurrent MACRO settingPos
-    push ax                  
-	push cx                     
+    push ax                     ;                     ;
+	push cx                     ;
 	push dx
 	
 	mov ah, 42h                 ; Записываем в ah код 42h - ф-ция DOS уставноки указателя файла
-	mov al, 1                   ; 1 - перемещение указателя от текущей позиции
+	mov al, 1
 	mov cx, 0                   ; Обнуляем cx, 
-	mov dx, settingPos	        ; Обнуляем dx, т.е премещаем указатель на 0 символов от начала файла (cx*65536)+dx 
+	mov dx, settingPos	        ; Обнуляем dx, т.е премещаем указатель на 0 символов от начала файла (cx*2^16)+dx 
 	int 21h                     ; Вызываем прерывания DOS для исполнения команды   
-                             
-	pop dx                      
-	pop cx                      
+                                ;
+	pop dx                      ; Восстанавливаем значения регистров и выходим из процедуры
+	pop cx                      ;                     ;
 	pop ax               
 ENDM
-
+;\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 fseek MACRO fseekPos
-    push ax                     
-	push cx                     
+    push ax                     ;                     ;
+	push cx                     ;
 	push dx
 	
 	mov ah, 42h                 ; Записываем в ah код 42h - ф-ция DOS уставноки указателя файла
-	mov al, 0 			        ; 0 - код перемещения указателя в начало файла 
+	mov al, 0 			        ; Обнуляем al, т.к. al=0 - код перемещения указателя в начало файла 
 	mov cx, 0                   ; Обнуляем cx, 
-	mov dx, fseekPos            ; Обнуляем dx, т.е премещаем указатель на 0 символов от начала файла (cx*65536)+dx 
+	mov dx, fseekPos            ; Обнуляем dx, т.е премещаем указатель на 0 символов от начала файла (cx*2^16)+dx 
 	int 21h                     ; Вызываем прерывания DOS для исполнения команды   
-                                
-	pop dx                      
-	pop cx                      
+                                ;
+	pop dx                      ; Восстанавливаем значения регистров и выходим из процедуры
+	pop cx                      ;                     ;
 	pop ax    
            
 ENDM
-
-setPointer proc                 ; Функция, устанавливающая указатель в файле на позицию, зависящую от startDX и flagStart
-    push cx                      
+;""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
+setPointer proc
+    push cx
     push bx
     
     mov bx, sourceID
@@ -180,61 +179,53 @@ endSetPos:
    pop cx
    ret 
 endp 
-
+;/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 main:
 	mov ax, @data           ; Загружаем данные
 	mov es, ax              ;
                             ;
 	xor ch, ch              ; Обнуляем ch
-	mov cl, ds:[80h]		; Количество символов строки, переданной через командную строку
+	mov cl, ds:[80h]		; Смещеие для дальнейшей работы с командой строкой
 	mov bl, cl
 	mov cmd_size, cl 		; В cmd_size загружаем длину командной строки
-	dec bl                  ; Уменьшаем значение количества символов в строке на 1, т.к. первый символ пробел
-	mov si, 81h             ; Смещение на параметр, переданный через командную строки
-	lea di, tempSourcePath        
-	
+	mov si, 81h             ;
+	lea di, cmd_text        ; Загружаем в di смещение текста переданного через командную строку
 	rep movsb               ; Записать в ячейку адресом ES:DI байт из ячейки DS:SI
-	
+                            ;
 	mov ds, ax              ; Загружаем в ds данные  
-	mov cmd_size, bl        
-	
-    mov cl, bl
-	lea di, cmd_text
-	lea si, tempSourcePath
-	inc si
-	rep movsb
-	                        
+	mov cmd_size, bl
+                            ;
 	println startText       ; Вывод строки о начале работы программы
-                            
+                            ;
 	call parseCMD           ; Вызов процедуры парсинга командной строки
-	cmp ax, 0               
-	jne endMain				; Если ax != 0, т.е. при выполении процедуры произошла ошибка - завершаем программу
-                            
-	call openFiles          ; Вызываем процедуру, которая открывает файл, переданный через командную строку и файл для записи результата
-	cmp ax, 0               
-	jne endMain				
+	cmp ax, 0               ;
+	jne endMain				; Если ax != 0, т.е. при выполении процедуры произошла ошибка - переходим к конце программы, т.е. прыгаем в endMain
+                            ;
+	call openFiles          ; Вызываем процедуру, которая открывает оба файла для чтения/записи
+	cmp ax, 0               ;
+	jne endMain				;
     
-    scanf enteredString         ; Вводим последовательность символов
-    xor ax, ax                  ; Запоминаем длину введенной последовательности
+    scanf enteredString
+    xor ax,ax
     mov al, [enteredString+1]
     mov enteredStringSize, ax
     
-    cmp enteredStringSize, 0    ; Если введенная строка пуста нет смысла проверять файл, следовательно заверашем программу 
+    cmp enteredStringSize, 0
     je endMain
-    println startProcessing                        
-	call processingFile       
+    println startProcessing                        ;
+	call checkStr       
                             
-endMain:                    
-	println endText             ; Выводим сообщение о завершении работы программы
-                            
-	mov ah, 4Ch                 ; Загружаем в ah код команды завершения работы
-	int 21h                     ; Вызов прерывания DOS для ее исполнения  
+endMain:                    ;
+	println endText         ; Выводим сообщение о завершении работы программы
+                            ;
+	mov ah, 4Ch             ; Загружаем в ah код команды завершения работы
+	int 21h                 ; Вызов прерывания DOS для ее исполнения  
 	         
 parseCMD proc
     xor ax, ax
     xor cx, cx
     
-    cmp cmd_size, 0             ; Если параметр не был передан, то переходим в notFound 
+    cmp cmd_size, 0
     je notFound
     
     mov cl, cmd_size
@@ -244,7 +235,7 @@ parseCMD proc
     add di, ax
     dec di
     
-findPoint:                      ; Ищем точку с конца файла, т.к. после неё идет разширение файла
+findPoint: 
     mov al, '.'
     mov bl, [di]
     cmp al, bl
@@ -252,12 +243,12 @@ findPoint:                      ; Ищем точку с конца файла, т.к. после неё идет 
     dec di
     loop findPoint
     
-notFound:                       ; Если точка не найдена выводим badCMDArgsMessage и завершаем программу
+notFound:
     println badCMDArgsMessage
     mov ax, 1
     ret
     
-pointFound:                     ; Количество символов должно быть равно 3, т.к. "txt", если отлично от этого => файл не подходит
+pointFound:
     mov al, cmd_size
     sub ax, cx
     cmp ax, 3
@@ -272,7 +263,7 @@ pointFound:                     ; Количество символов должно быть равно 3, т.к. 
     
     mov cx, 3
     
-    repe cmpsb                  ; Сравниваем со строкой Extension расширение файла, если всё совпало - копируем адрес файла в sourcePath 
+    repe cmpsb
     jne notFound
     
     strcpy sourcePath, cmd_text, cmd_size
@@ -280,21 +271,21 @@ pointFound:                     ; Количество символов должно быть равно 3, т.к. 
     ret         
 endp
 
-openFiles PROC               
-	push bx                     
-	push dx                                
+openFiles PROC                  ;
+	push bx                     ;
+	push dx                     ;           
 	push si                                     
-                                 
+                                 ;
 	mov ah, 3Dh			        ; Функция 3Dh - открыть существующий файл
 	mov al, 02h			        ; Режим открытия файла - чтение
-	lea dx, sourcePath          ; Загружаем в dx название исходного файла 
-	int 21h                     
-                              
+	lea dx, path          ; Загружаем в dx название исходного файла 
+	int 21h                     ;
+                                ;
 	jb badOpenSource	        ; Если файл не открылся, то прыгаем в badOpenSource
-                              
+                                ;
 	mov sourceID, ax	        ; Загружаем в sourceId значение из ax, полученное при открытии файла
      
-    mov ah, 3Ch                 ; Функция 3Ch - создать файл
+    mov ah, 3Ch
     xor cx, cx
     lea dx, destinationPath
     int 21h 
@@ -309,53 +300,53 @@ openFiles PROC
     jb badOpenSource
     
     mov destinationID, ax
-                                
+                                ;
 	mov ax, 0			        ; Загружаем в ax 0, т.е. ошибок во время выполнения процедуры не произшло    
 	jmp endOpenProc		        ; Прыгаем в endOpenProc и корректно выходим из процедуры
-                                
-badOpenSource:                  
+                                ;
+badOpenSource:                  ;
 	println badSourceText       ; Выводим соответсвующее сообщение
 	
-	cmp ax, 02h                 ; Сравниваем ax с 02h
+	cmp ax, 02h                 ; Сравниваем ax с 03h
 	jne errorFound              ; Если ax != 02h file error, прыгаем в errorFound
-                                
+                                ;
 	println fileNotFoundText    ; Выводим сообщение о том, что файл не найден  
-                                
+                                ;
 	jmp errorFound              ; Прыгаем в errorFound
                                
-errorFound:                     
+errorFound:                     ;
 	mov ax, 1
 	                   
 endOpenProc:
-    pop si               
-	pop dx                                                     
-	pop bx                  
-	ret                     
+    pop si                      ;
+	pop dx                      ;                                   
+	pop bx                      ;
+	ret                         ;
 ENDP
 
-processingFile proc             ; Процедура, бработки входного файла
+checkStr proc
     
 for1:
-    mov tempDX, 0               ; Обнуляем tempDX и flagTemp 
+    mov tempDX, 0
     mov flagTemp, 0
     
     mov bx, sourceID
-    call setPointer             ; Устанавливаем указатель на начало строки
+    call setPointer
         
-    lea si, enteredString       ; Переходим в начало введеной строки
+    lea si, enteredString
     add si, 2
     
 for2:    
-    call readSymbolFromFile     ; Считываем символ с файла
+    call readSymbolFromFile
     
     incrementTempPos 1
     
-    cmp ax, 0                   ; Если ничего не считали => конец файла
+    cmp ax, 0
     je endFileGG
-    cmp [buf], 0                ; Если считали NULL => конец файла
+    cmp [buf], 0
     je endFileGG
     
-    cmp [buf], returnSymbol     ; Проверяем не конец строки: cret, new line, \0
+    cmp [buf], returnSymbol
     je  endString
     cmp [buf], newLineSymbol
     je  endString
@@ -368,14 +359,14 @@ for2:
     mov al, buf
     mov bl, [si]
      
-    cmp al, bl                  ; Если символа равны идем в doSomething
+    cmp al, bl
     je doSomething
     
     jmp for2
     
 endString:
-    call incrementStartPos       ; Запоминаем начало строки
-    jmp for1                     ; Продолжаем обработку
+    call incrementStartPos  
+    jmp for1
     
     
 doSomething:        
@@ -384,7 +375,7 @@ doSomething:
     xor bx, bx      
     mov bl, [si]
     
-    cmp bl, newLineSymbol        ; Если дошли до конца введенной строки, то все символа содержатся 
+    cmp bl, newLineSymbol
     je stringUdov
     cmp bl, returnSymbol
     je stringUdov
@@ -400,14 +391,14 @@ doSomething:
     jmp for2
     
 stringUdov:
-    call writeStr                ; Записываем в output.txt
+    call writeStr   
     jmp for1
     
 endFileGG:
     
     ret
 endp
-
+;&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 writeStr proc
     mov bx, sourceID 
     call setPointer
@@ -446,25 +437,25 @@ endAll:
         
     ret
 endp    
-    
+;**********************************************************************************************************************    
 readSymbolFromFile proc
     push bx
     push dx
     
     mov ah, 3Fh                     ; Загружаем в ah код 3Fh - код ф-ции чтения из файла
 	mov bx, sourceID                ; В bx загружаем ID файла, из которого собираемся считывать
-	mov cx, 1                       ; В cx загружаем количество считываемых символов
+	mov cx, 1                       ; В cx загружаем максимальный размер слова, т.е. считываем максимальное кол-во символов (maxWordSize символов)
 	lea dx, buf                     ; В dx загружаем смещения буффера, в который будет считывать данные из файла
 	int 21h                         ; Вызываем прерывание для выполнения ф-ции
 	
 	jnb successfullyRead            ; Если ошибок во время счтения не произошло - прыгаем в goodRead
 	
 	println errorReadSourceText     ; Иначе выводим сообщение об ошибке чтения из файла
-	mov ax, 0                       
+	mov ax, 0                       ;
 	    
 successfullyRead:
 
-	pop dx                         
+	pop dx                          ;
 	pop bx
 	                                
 	ret    	   
