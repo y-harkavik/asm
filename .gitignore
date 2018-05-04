@@ -2,3 +2,5 @@
 *.exe
 *.map
 *.obj
+*.com
+*.COM
