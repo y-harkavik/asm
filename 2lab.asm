@@ -11,7 +11,7 @@ data segment
     string db 202 dup("$")
     find_str db 202 dup("$")
     change_str db 202 dup("$") 
-    length db 200
+    stringLength db 200
  
 data ends 
 
@@ -27,7 +27,7 @@ lea dx, intro
 call output 
   
   
-mov al, length          ;load max string length
+mov al, stringLength    ;load max string length
 mov [string], al        ;load max string length 
 mov [string + 1], 0     ;null fact length 
 lea dx, string          ;load string to dx 
@@ -63,7 +63,7 @@ lea bx,find_str         ; set find_str in bx
 add bx,2                ;moving bx ptr to fisrt string character
 
 mov al, [string + 1]    ;saving fact string length into al 
-mov length, al          ;saving fact length
+mov stringLength, al    ;saving fact length
 
 
 
@@ -75,7 +75,7 @@ xor ax,ax
 mov dh,[find_str+1]     ;saving fact length of find_str
 
 find_equal:
-    cmp length, cl          ;check abroad
+    cmp stringLength, cl    ;check abroad
     jbe finish              ;if went to the abroad not found finish
     lodsb                   ;get sym from si in al and inc  si
     cmp byte ptr[bx], al    ;compare sym
@@ -100,20 +100,20 @@ not_equal:
 add_str:
       std               ;set flag of direction
       lea bx,string     ;set string
-      mov al,length     ;save string length
+      mov al,stringLength     ;save string length
       add al,1          ;add 1 because string start of second byte and length more by one then we need
       xor ah,ah         ;null ah
       add bx,ax         ;move pointer on last sym in string
                         
       mov si,bx         ;move string in si
-      mov dh, length    ;remember string length in dh
+      mov dh, stringLength    ;remember string length in dh
       sub dh,cl         ;num of elem in stack
-      dec length        ;dec length, because numeration start from zero. example "qwerty" length=6, but 'y' has 5 address
+      dec stringLength  ;dec length, because numeration start from zero. example "qwerty" length=6, but 'y' has 5 address
       jmp pushInStack   ;push excess sym after substr in stack
       
 pushInStack:
-    cmp length,cl       ;while(cl<=length) cl - point on first substr sym 
-    jge addItem         ;
+    cmp stringLength,cl ;while(cl<=length) cl - point on first substr sym 
+    jge addItem         
     jmp pasteStr        ;if add all sym in stack
     
 addItem:
@@ -122,7 +122,7 @@ addItem:
     lodsb               ;get sym from string and string++
     xor ah,ah
     push ax
-    dec length
+    dec stringLength
     jmp pushInStack     
 
 pasteStr:
@@ -132,7 +132,7 @@ pasteStr:
     
     
     xor ax,ax
-    mov al,ch           ;start point when we will put syms
+    mov al,ch              ;start point when we will put syms
     
     lea di,string
     add di,2
@@ -144,22 +144,22 @@ pasteStr:
     add al,dh              ;and +num sym in stack
     
 
-    mov [string+1],al   ;change fact length in str
+    mov [string+1],al      ;change fact length in str
     
     xor cx,cx
     mov cl,[change_str+1]
      
-    rep movsb           ;move sym from si to di
+    rep movsb              ;move sym from si to di
     
-    mov cl,dh           ;return num of elem in stack
+    mov cl,dh              ;return num of elem in stack
      
 getFromStack:
-    cmp cl,0            ;if stack empty
+    cmp cl,0               ;if stack empty
     je finish
     cld
     xor ax,ax
     pop ax
-    stosb               ;put sym from al to di and di++
+    stosb                  ;put sym from al to di and di++
     loop getFromStack
     xor cx,cx
     jmp go        
@@ -180,7 +180,7 @@ output endp
 finish:
       xor ax,ax         
       mov ax,'$'
-      stosb           ;put terminator in the end of string
+      stosb                 ;put terminator in the end of string
       lea dx,answer
       call output
       lea dx,string
@@ -189,3 +189,4 @@ finish:
       mov ax,4c00h
       int 21h
 end start
+code ends

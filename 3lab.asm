@@ -1,7 +1,7 @@
 .model	small
 .stack	100h
 .data
-            
+.386            
 MaxArrayLength              equ 30            
             
 ArrayLength                 dw  ?
